@@ -25,7 +25,7 @@ Feature-complete for the core product. All automated checks pass (see Verificati
 - `npx tsc -b` — clean
 - `npm test` — 52/52 unit tests
 - `npm run test:e2e` — 16/16 browser tests (dev server)
-- `E2E_PROD=1 npm run test:e2e` — 12/12 at the time of the production run (before the 4 keyboard tests were added); re-run in final validation, see below
+- `E2E_PROD=1 npm run test:e2e` — 16/16 against the production build
 - `npm run build` — OK (main JS 95 KB gzip; MediaPipe chunk lazy)
 - WAV: `case-study/demos/first-light.wav` — pcm_s16le, 44.1 kHz, 2 ch (ffprobe)
 
