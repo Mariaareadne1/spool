@@ -128,3 +128,28 @@ describe('history', () => {
     expect(canRedo(h)).toBe(false);
   });
 });
+
+describe('recorder', async () => {
+  const { Recorder } = await import('../../src/music/recorder');
+  test('captures onsets, durations, snapping and seam-crossing notes', () => {
+    const p = createProject({ bars: 1 }); // 4-beat loop
+    const r = new Recorder(p, 'pluck', true);
+    r.noteOn(1, 3, 0.8, 4.9); // second pass, near beat 1
+    r.noteOff(1, 5.6);
+    r.noteOn(2, 5, 0.7, 7.6); // crosses the seam into pass 3
+    r.noteOn(3, 0, 0.5, 4.1);
+    r.flush(8.4);
+    const notes = r.current.notes;
+    expect(notes.map((n) => [n.start, n.duration, n.degree])).toEqual([[1, 0.75, 3], [3.5, 0.75, 5], [0, 4, 0]]);
+    expect(r.current.phrase.anchor).toBe(0); // earliest onset (4.1 → beat 0)
+    expect(r.current.phrase.ordinal).toBe(1);
+  });
+  test('without snapping keeps raw timing, enforces minimum duration', () => {
+    const r = new Recorder(createProject({ bars: 1 }), 'bass', false);
+    r.noteOn(1, 0, 1, 1.13);
+    const n = r.noteOff(1, 1.14);
+    expect(n?.start).toBeCloseTo(1.13);
+    expect(n?.duration).toBe(0.25);
+    expect(r.noteOff(99, 2)).toBeNull();
+  });
+});
