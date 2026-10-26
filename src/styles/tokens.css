@@ -1,0 +1,59 @@
+:root {
+  color-scheme: dark;
+
+  /* ink & paper */
+  --bg: #0d0c0a;
+  --bg-raised: #15130f;
+  --bg-sunk: #0a0908;
+  --paper: #ede6da;
+  --muted: #9a9183;
+  --faint: #6b6458;
+  --line: rgba(237, 230, 218, 0.08);
+  --line-strong: rgba(237, 230, 218, 0.16);
+  --rec: #ff5a4e;
+  --rec-soft: rgba(255, 90, 78, 0.14);
+  --ok: #9fd3a8;
+
+  /* threads */
+  --glass: #ecd6a0;
+  --pluck: #e8745c;
+  --pad: #7fbaa6;
+  --bass: #9592e0;
+
+  /* type */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Inter Tight Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --t-hero: clamp(64px, 9vw, 132px);
+  --t-title: 22px;
+  --t-body: 14px;
+  --t-small: 12.5px;
+  --t-label: 10.5px;
+  --track-label: 0.11em;
+
+  /* space */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --radius: 10px;
+
+  /* motion: one spring, three durations */
+  --spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.099 24.3%, 1.108 26%, 1.103, 1.085 30.7%, 1.008 39.6%, 0.992 43.4%, 0.987 48.5%, 1 63.1%, 1.001 69.3%, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --d-1: 120ms;
+  --d-2: 240ms;
+  --d-3: 480ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --spring: linear(0, 1);
+    --d-1: 0ms;
+    --d-2: 0ms;
+    --d-3: 0ms;
+  }
+}
