@@ -7,6 +7,8 @@ import { startVoice, type Voice } from './voices';
 /** How far ahead the scheduler queues notes, and how often it wakes. */
 export const LOOKAHEAD_SECONDS = 0.12;
 export const TICK_MS = 25;
+/** Notes more than this late (seconds) are skipped rather than played in a pile-up. */
+const LATE_TOLERANCE = 0.03;
 /** Delay between pressing play and beat 0, so the first notes are never late. */
 const START_OFFSET = 0.06;
 
@@ -63,8 +65,16 @@ export class AudioEngine {
       const beat = (this.ctx.currentTime - this.startTime) / secondsPerBeat(prev);
       this.startTime = this.ctx.currentTime - beat * secondsPerBeat(project);
     }
-    if (this.playing && (prev.bars !== project.bars)) {
-      this.scheduledUntil = this.beatAt(this.ctx.currentTime);
+    if (this.playing && prev.bars !== project.bars) {
+      // Keep the playhead where it is inside the loop, and shift the scheduling
+      // horizon by the same amount so nothing already queued is queued twice.
+      const now = this.ctx.currentTime;
+      const abs = this.beatAt(now);
+      const within = mod(Math.max(0, abs), loopBeats(prev));
+      const pos = within < loopBeats(project) ? within : mod(within, loopBeats(project));
+      const shift = abs - pos;
+      this.startTime += shift * secondsPerBeat(project);
+      this.scheduledUntil -= shift;
     }
   }
 
@@ -99,7 +109,7 @@ export class AudioEngine {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     const now = this.ctx.currentTime;
-    for (const v of this.scheduled) v.release(now);
+    for (const v of this.scheduled) v.release(now, true);
     this.scheduled.clear();
   }
 
@@ -119,9 +129,13 @@ export class AudioEngine {
     const horizon = this.beatAt(this.ctx.currentTime + LOOKAHEAD_SECONDS);
     if (horizon <= this.scheduledUntil) return;
     const from = this.scheduledUntil;
+    const now = this.ctx.currentTime;
     for (const { note, beat } of notesInWindow(p, from, horizon)) {
       if (p.tracks[note.track].muted) continue;
       const t0 = this.startTime + beat * spb;
+      // A throttled (background-tab) timer wakes late: drop notes whose moment
+      // has passed instead of firing them all at once as a burst.
+      if (t0 < now - LATE_TOLERANCE) continue;
       const voice = startVoice(this.ctx, this.mix.buses[note.track], note.track, noteFrequencies(p, note.track, note.degree), note.velocity, t0);
       voice.release(t0 + note.duration * spb);
       this.track(voice, this.scheduled);

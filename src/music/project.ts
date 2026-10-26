@@ -95,14 +95,21 @@ export function parseProject(input: unknown): Project {
   }
   if (!Array.isArray(phrases) || !Array.isArray(notes)) fail('Missing notes or phrases');
   const loop = bars * 4;
-  const parsedPhrases: Phrase[] = phrases.map((p) => {
+  const phraseTrack = new Map<string, TrackId>();
+  const allPhrases: Phrase[] = phrases.map((p) => {
     if (!isObj(p) || typeof p.id !== 'string' || !isTrack(p.track) || !isNum(p.ordinal) || !isNum(p.anchor)) fail('Invalid phrase');
-    return { id: p.id, track: p.track, ordinal: p.ordinal, anchor: clamp(p.anchor, 0, loop) };
+    if (phraseTrack.has(p.id)) fail('Duplicate phrase id');
+    phraseTrack.set(p.id, p.track);
+    return { id: p.id, track: p.track, ordinal: p.ordinal, anchor: ((p.anchor % loop) + loop) % loop };
   });
-  const phraseIds = new Set(parsedPhrases.map((p) => p.id));
+  const noteIds = new Set<string>();
   const parsedNotes: Note[] = notes.map((n) => {
     if (!isObj(n) || typeof n.id !== 'string' || typeof n.phraseId !== 'string' || !isTrack(n.track)) fail('Invalid note');
-    if (!phraseIds.has(n.phraseId)) fail('Note references a missing phrase');
+    if (noteIds.has(n.id)) fail('Duplicate note id');
+    noteIds.add(n.id);
+    const track = phraseTrack.get(n.phraseId);
+    if (!track) fail('Note references a missing phrase');
+    if (track !== n.track) fail('Note track does not match its phrase');
     if (!isNum(n.start) || !isNum(n.duration) || !isNum(n.degree) || !isNum(n.velocity)) fail('Invalid note timing');
     if (n.start < 0 || n.start >= loop || n.duration <= 0) fail('Note outside the loop');
     return {
@@ -115,6 +122,8 @@ export function parseProject(input: unknown): Project {
       velocity: clamp(n.velocity, 0, 1),
     };
   });
+  const used = new Set(parsedNotes.map((n) => n.phraseId));
+  const parsedPhrases = allPhrases.filter((p) => used.has(p.id));
   const createdAt = isNum(input.createdAt) ? input.createdAt : Date.now();
   const updatedAt = isNum(input.updatedAt) ? input.updatedAt : createdAt;
   return {

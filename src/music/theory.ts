@@ -29,7 +29,7 @@ export function mod(n: number, m: number): number {
 }
 
 export function isScaleName(value: unknown): value is ScaleName {
-  return typeof value === 'string' && value in SCALES;
+  return typeof value === 'string' && Object.hasOwn(SCALES, value);
 }
 
 /** Scale degree (0 = tonic of the base octave, may be negative) → MIDI note number. */

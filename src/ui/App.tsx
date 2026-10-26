@@ -3,10 +3,10 @@ import { SCALES } from '../music/theory';
 import { TRACK_IDS } from '../music/types';
 import { useAppState, useSpool } from './context';
 import { Instrument } from './Instrument';
-import { degreeForKey, isTypingTarget } from './keys';
+import { degreeForKey, isKeyboardFocusedControl, isTypingTarget } from './keys';
 import { Landing } from './Landing';
 
-/** Global keyboard: home row plays, Space/R transport, Tab mode, arrows sculpt. */
+/** Global keyboard: home row plays, Space/R transport, E mode, arrows sculpt. Tab is left to focus navigation. */
 function useKeyboard() {
   const app = useSpool();
   useEffect(() => {
@@ -27,12 +27,12 @@ function useKeyboard() {
       }
       if (mod || e.altKey) return;
       if (e.code === 'Space') {
+        if (isKeyboardFocusedControl(e.target)) return;
         e.preventDefault();
         if (!e.repeat) void app.togglePlay();
         return;
       }
-      if (e.code === 'Tab') {
-        e.preventDefault();
+      if (e.code === 'KeyE' && !e.repeat) {
         app.setMode(s.mode === 'perform' ? 'sculpt' : 'perform');
         return;
       }

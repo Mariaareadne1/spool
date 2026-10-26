@@ -4,7 +4,7 @@ import { GestureInterpreter, type GestureFrame, type RawHand } from '../gesture/
 import { HandTracker, type TrackerStatus } from '../gesture/tracker';
 import { canRedo, canUndo, commit, createHistory, redo, undo, type History } from '../music/history';
 import { demoProject } from '../music/demo';
-import { addPhrase, createProject, setTrack, updateSettings } from '../music/project';
+import { addPhrase, createProject, makeId, setTrack, updateSettings } from '../music/project';
 import { Recorder, type Take } from '../music/recorder';
 import { quantize, type ScaleName } from '../music/theory';
 import { clampSteps, deletePhrase, GRID, phraseNotes, sculptPhrase, STRETCH_FACTORS } from '../music/transform';
@@ -358,10 +358,12 @@ export class SpoolApp {
   // ---------- project settings ----------
 
   setBpm(bpm: number): void {
+    if (this.drag) return;
     this.commitProject(updateSettings(this.project, { bpm }));
   }
 
   setKey(root: number, scale: ScaleName): void {
+    if (this.drag) return;
     this.commitProject(updateSettings(this.project, { root, scale }));
   }
 
@@ -372,7 +374,7 @@ export class SpoolApp {
   }
 
   setBars(bars: number): void {
-    if (bars === this.project.bars) return;
+    if (bars === this.project.bars || this.drag) return;
     if (this.state.recording) this.stopRecording();
     const loop = bars * this.project.beatsPerBar;
     const kept = this.project.notes.filter((n) => n.start < loop);
@@ -462,7 +464,8 @@ export class SpoolApp {
     const edit = this.state.edit;
     this.drag = null;
     if (!edit) return;
-    const changed = edit.steps !== 0 || edit.beats !== 0 || edit.factor !== 1;
+    const exists = this.project.phrases.some((p) => p.id === edit.phraseId);
+    const changed = exists && (edit.steps !== 0 || edit.beats !== 0 || edit.factor !== 1);
     const next = changed ? sculptPhrase(this.project, edit.phraseId, edit) : this.project;
     this.set({ edit: null, history: changed ? commit(this.state.history, next) : this.state.history });
   }
@@ -486,7 +489,7 @@ export class SpoolApp {
 
   deleteSelected(): void {
     const sel = this.state.selection;
-    if (!sel) return;
+    if (!sel || this.drag) return;
     this.commitProject(deletePhrase(this.project, sel));
     this.set({ selection: null });
     this.toast('Phrase removed (⌘Z to undo)');
@@ -603,8 +606,17 @@ export class SpoolApp {
     this.save();
     const fresh = createProject({ bpm: this.project.bpm, root: this.project.root, scale: this.project.scale });
     this.loadIntoHistory(fresh);
-    saveProject(fresh);
-    this.set({ saved: listProjects() });
+    this.persistQuietly(fresh);
+  }
+
+  /** Save without a success toast; report failure (the project is still open either way). */
+  private persistQuietly(project: Project): void {
+    try {
+      saveProject(project);
+      this.set({ saved: listProjects(), lastSavedAt: Date.now() });
+    } catch (err) {
+      this.toast(err instanceof StorageError ? `Opened, but not saved: ${err.message}` : 'Opened, but saving failed.', 'error');
+    }
   }
 
   async exportWav(): Promise<ExportReport | null> {
@@ -628,15 +640,18 @@ export class SpoolApp {
   }
 
   async importJson(file: File): Promise<void> {
+    let project: Project;
     try {
-      const project = await projectFromFile(file);
-      this.loadIntoHistory(project);
-      saveProject(project);
-      this.set({ saved: listProjects() });
-      this.toast(`Imported “${project.name}”`, 'ok');
+      project = await projectFromFile(file);
     } catch (err) {
       this.toast(err instanceof Error ? err.message : 'Import failed.', 'error');
+      return;
     }
+    // never silently overwrite a different saved project that happens to share the id
+    if (this.state.saved.some((s) => s.id === project.id)) project = { ...project, id: makeId('prj') };
+    this.loadIntoHistory(project);
+    this.toast(`Imported “${project.name}”`, 'ok');
+    this.persistQuietly(project);
   }
 
   /** Visual helper: radius of a degree in the active ring (for rail ↔ ring alignment). */

@@ -9,6 +9,7 @@ const PERFORM_HINTS_POINTER: [string, string][] = [
   ['Record a phrase', 'R'],
   ['Play / stop', 'Space'],
   ['Thread', '1–4'],
+  ['Sculpt mode', 'E'],
 ];
 const PERFORM_HINTS_CAMERA: [string, string][] = [
   ['Play', 'pinch'],
@@ -22,6 +23,7 @@ const SCULPT_HINTS: [string, string][] = [
   ['Shift in time', 'drag around · ←→'],
   ['Stretch', '[ and ]'],
   ['Remove', '⌫'],
+  ['Perform mode', 'E'],
 ];
 const SCULPT_HINTS_CAMERA: [string, string][] = [
   ['Grab', 'pinch on a thread'],
@@ -56,39 +58,26 @@ export function Side() {
             const th = THREAD[t];
             const muted = project.tracks[t].muted;
             return (
-              <li key={t}>
-                <div
-                  className="track"
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={state.activeTrack === t}
-                  data-muted={muted}
-                  data-testid={`track-${t}`}
-                  style={{ '--c': th.color } as React.CSSProperties}
-                  onClick={() => app.selectTrack(t)}
-                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), app.selectTrack(t))}
-                >
-                  <span className="track__swatch">{i + 1}</span>
-                  <span>
+              <li key={t} className="track" data-active={state.activeTrack === t} data-muted={muted} style={{ '--c': th.color } as React.CSSProperties}>
+                <button className="track__select" aria-pressed={state.activeTrack === t} data-testid={`track-${t}`} onClick={() => app.selectTrack(t)}>
+                  <span className="track__swatch" aria-hidden>{i + 1}</span>
+                  <span className="track__text">
                     <span className="track__name">{th.name}</span>
                     <span className="track__meta">{th.blurb}</span>
                   </span>
-                  <span className="track__end">
-                    <span className="track__count">{counts[t] || ''}</span>
-                    <button
-                      className="mute"
-                      aria-pressed={muted}
-                      aria-label={`${muted ? 'Unmute' : 'Mute'} ${th.name}`}
-                      data-testid={`mute-${t}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        app.toggleMute(t);
-                      }}
-                    >
-                      M
-                    </button>
-                  </span>
-                </div>
+                </button>
+                <span className="track__end">
+                  <span className="track__count" aria-label={`${counts[t]} notes`}>{counts[t] || ''}</span>
+                  <button
+                    className="mute"
+                    aria-pressed={muted}
+                    aria-label={`Mute ${th.name}`}
+                    data-testid={`mute-${t}`}
+                    onClick={() => app.toggleMute(t)}
+                  >
+                    M
+                  </button>
+                </span>
               </li>
             );
           })}

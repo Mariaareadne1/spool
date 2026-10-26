@@ -1,7 +1,7 @@
 import { notesInWindow } from '../music/schedule';
 import { loopBeats, secondsPerBeat, type Project } from '../music/types';
 import { createMixGraph, noteFrequencies } from './mix';
-import { startVoice } from './voices';
+import { releaseTail, startVoice, VOICES } from './voices';
 
 export interface RenderOptions {
   /** How many times the loop plays. */
@@ -16,8 +16,17 @@ export const DEFAULT_RENDER: RenderOptions = { loops: 2, tail: 2.5, sampleRate: 
 
 type OfflineCtor = new (channels: number, length: number, sampleRate: number) => OfflineAudioContext;
 
+/**
+ * Loops plus a tail long enough for the longest note that runs past the end
+ * (plus its release) — so nothing is truncated with a click at the buffer end.
+ */
 export function renderDuration(project: Project, opts: RenderOptions = DEFAULT_RENDER): number {
-  return opts.loops * loopBeats(project) * secondsPerBeat(project) + opts.tail;
+  const loop = loopBeats(project);
+  const spb = secondsPerBeat(project);
+  const overhang = project.notes.reduce((m, n) => Math.max(m, n.start + n.duration - loop), 0);
+  const release = project.notes.reduce((m, n) => Math.max(m, releaseTail(VOICES[n.track].adsr)), 0);
+  const needed = overhang > 0 ? overhang * spb + release + 0.1 : 0;
+  return opts.loops * loop * spb + Math.max(opts.tail, needed);
 }
 
 /**

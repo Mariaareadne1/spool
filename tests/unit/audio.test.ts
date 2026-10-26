@@ -158,3 +158,33 @@ describe('spectral flux onsets', async () => {
     expect(onsets.length).toBeLessThanOrEqual(4);
   });
 });
+
+describe('early release (transport stop)', () => {
+  test('a voice already scheduled to release later can be released earlier', async () => {
+    const ctx = new Offline(1, SR * 3, SR);
+    const v = startVoice(ctx, ctx.destination, 'pad', [220, 277, 330], 1, 0);
+    v.release(2.5); // what the scheduler does when it queues a long note
+    v.release(0.5, true); // transport stop
+    const buf = await ctx.startRendering();
+    const d = buf.getChannelData(0);
+    expect(rms(d, 0.3 * SR, 0.45 * SR)).toBeGreaterThan(0.01);
+    expect(rms(d, 0.8 * SR, 1.0 * SR)).toBeLessThan(1e-4);
+  });
+  test('a voice scheduled in the future never sounds if stopped before it starts', async () => {
+    const ctx = new Offline(1, SR * 2, SR);
+    const v = startVoice(ctx, ctx.destination, 'pluck', [440], 1, 1.0);
+    v.release(1.5);
+    v.release(0.2, true);
+    const buf = await ctx.startRendering();
+    expect(peak(buf.getChannelData(0))).toBeLessThan(1e-5);
+  });
+});
+
+describe('render length', () => {
+  test('tail grows to fit a note that runs past the last loop', () => {
+    const p = compose([{ start: 3.5, degree: 0, duration: 4 }], 'pad'); // 120 bpm, 4-beat loop
+    const d = renderDuration(p, { loops: 1, tail: 0.5, sampleRate: SR, channels: 2 });
+    // note ends 3.5 beats past the loop (1.75 s) + pad release tail 0.96 s
+    expect(d).toBeGreaterThanOrEqual(2 + 1.75 + 0.96);
+  });
+});

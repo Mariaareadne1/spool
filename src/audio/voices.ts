@@ -45,8 +45,12 @@ export function releaseTail(adsr: Adsr): number {
 }
 
 export interface Voice {
-  /** Schedule the release at `time`; the voice stops and disconnects itself afterwards. */
-  release(time: number): void;
+  /**
+   * Schedule the release at `time`; the voice stops and disconnects itself
+   * afterwards. May be called again with an *earlier* time (e.g. the transport
+   * stopping before a queued note's planned end); `fast` uses a short fade.
+   */
+  release(time: number, fast?: boolean): void;
   /** Called once every node has stopped and been disconnected. */
   onEnded?: () => void;
 }
@@ -158,19 +162,25 @@ export function startVoice(
   parts.out.connect(destination);
   for (const s of parts.sources) s.start(t0);
 
-  let released = false;
+  let releasedAt = Infinity;
   let remaining = parts.sources.length;
   const voice: Voice = {
-    release(time: number) {
-      if (released) return;
-      released = true;
+    release(time: number, fast = false) {
       const tr = Math.max(time, t0);
-      const value = envelopeAt(spec.adsr, peak, tr - t0);
+      if (tr >= releasedAt) return;
+      releasedAt = tr;
+      const tail = fast ? Math.min(0.06, spec.adsr.release) : spec.adsr.release;
       const g = env.gain;
       g.cancelScheduledValues(tr);
-      g.setValueAtTime(value, tr);
-      g.setTargetAtTime(0, tr, spec.adsr.release / 5);
-      const end = tr + releaseTail(spec.adsr);
+      if (time <= t0) {
+        // never started: silence it outright
+        g.setValueAtTime(0, t0);
+        for (const s of parts.sources) s.stop(t0);
+        return;
+      }
+      g.setValueAtTime(envelopeAt(spec.adsr, peak, tr - t0), tr);
+      g.setTargetAtTime(0, tr, tail / 5);
+      const end = tr + tail * 1.2;
       g.setValueAtTime(0, end);
       for (const s of parts.sources) s.stop(end + 0.01);
     },

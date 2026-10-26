@@ -163,3 +163,25 @@ describe('clampSteps', async () => {
     expect(clampSteps(p, 'ph1', 4, { lo: 0, hi: 14 })).toBe(4);
   });
 });
+
+describe('project validation: hostile and inconsistent input', () => {
+  const base = () => JSON.parse(JSON.stringify(withPhrase(createProject({ bars: 2 }), [0, 1])));
+  test('prototype keys are not scales', () => {
+    for (const scale of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      expect(() => parseProject({ ...base(), scale })).toThrow(/Unknown scale/);
+    }
+  });
+  test('duplicate ids and track mismatches are rejected', () => {
+    const p = base();
+    expect(() => parseProject({ ...p, phrases: [p.phrases[0], p.phrases[0]] })).toThrow(/Duplicate phrase/);
+    expect(() => parseProject({ ...p, notes: [p.notes[0], p.notes[0]] })).toThrow(/Duplicate note/);
+    expect(() => parseProject({ ...p, notes: [{ ...p.notes[0], track: 'bass' }] })).toThrow(/track/);
+  });
+  test('empty phrases are dropped and anchors wrap inside the loop', () => {
+    const p = base();
+    const extra = { id: 'empty', track: 'glass', ordinal: 1, anchor: 8 };
+    const parsed = parseProject({ ...p, phrases: [{ ...p.phrases[0], anchor: 8 }, extra] });
+    expect(parsed.phrases.map((ph) => ph.id)).toEqual(['ph1']);
+    expect(parsed.phrases[0].anchor).toBe(0);
+  });
+});
