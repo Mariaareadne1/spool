@@ -51,9 +51,8 @@ See `README.md` and `case-study/diagrams/architecture.svg`.
 
 ## Blockers / needs the owner
 
-1. **Repository is private.** Creating a *public* repo was refused by the session's permission classifier ("public surface"). It was created private instead: https://github.com/Mariaareadne1/spool. To publish:
-   `gh repo edit Mariaareadne1/spool --visibility public --accept-visibility-change-consequences`
-2. **No live deployment.** Not attempted, for the same reason (a deploy publishes the app). To deploy on Vercel: `npx vercel --prod` from the repo root (static Vite build, output `dist`), or connect the repo in the Vercel dashboard.
+1. **Repository is public** (made public by the owner's request on 2026-10-26): https://github.com/Mariaareadne1/spool
+2. **No live deployment.** Not attempted (a deploy publishes the app; the classifier had refused public publishing during the build). To deploy on Vercel: `npx vercel --prod` from the repo root (static Vite build, output `dist`), or connect the repo in the Vercel dashboard.
 3. **No LICENSE file** — choosing a license is the owner's call.
 4. **Real-camera play** needs a person: check pinch latency, threshold feel (`PINCH_ON/OFF`, `OPEN_ON/OFF` in `src/gesture/interpret.ts`), and the open-palm record dwell (900 ms).
 
