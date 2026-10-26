@@ -274,10 +274,16 @@ button {
 
 .landing__visual {
   position: relative;
+  min-width: 0;
   height: min(86vh, 860px);
   display: grid;
   place-items: center;
   animation: unspool 1.4s var(--ease-out) both;
+}
+
+.landing__visual canvas {
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .landing__caption {
@@ -510,6 +516,10 @@ button {
   gap: 2px;
 }
 
+.track > span:nth-child(2) {
+  min-width: 0;
+}
+
 .track {
   --c: var(--paper);
   position: relative;
@@ -564,6 +574,9 @@ button {
 
 .track__meta {
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11.5px;
   color: var(--faint);
 }
@@ -1051,18 +1064,14 @@ button {
   flex: 1;
 }
 
-/* sculpt panel (floats over the stage, top-left) */
+/* sculpt panel (lives in the side column, so it never covers the score) */
 
 .sculpt-panel {
-  position: absolute;
-  left: var(--s-5);
-  top: var(--s-5);
-  width: 220px;
   padding: var(--s-4);
+  margin: 0 calc(var(--s-2) * -1);
   border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: rgba(13, 12, 10, 0.72);
-  backdrop-filter: blur(8px);
+  background: rgba(237, 230, 218, 0.025);
   display: grid;
   gap: var(--s-3);
   animation: rise var(--d-2) var(--ease-out) both;
@@ -1222,8 +1231,13 @@ button {
 
 .hand-coach {
   position: absolute;
-  inset: auto 0 var(--s-6);
-  text-align: center;
+  left: var(--s-5);
+  top: var(--s-5);
+  max-width: 260px;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: rgba(13, 12, 10, 0.86);
   pointer-events: none;
   font-size: var(--t-small);
   color: var(--muted);
@@ -1232,9 +1246,10 @@ button {
 
 .hand-coach em {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 17px;
   color: var(--paper);
   display: block;
+  margin-bottom: 2px;
 }
 
 .hold-meter {
@@ -1250,15 +1265,27 @@ button {
 
 /* ---------------------------------------------------------------- responsive */
 
-@media (max-width: 1180px) {
-  .instrument {
-    grid-template-columns: 220px minmax(0, 1fr) 128px;
-  }
+@media (max-width: 1340px) {
   .transport {
     gap: var(--s-3);
   }
   .hide-md {
     display: none !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .instrument {
+    grid-template-columns: 220px minmax(0, 1fr) 128px;
+  }
+  .transport {
+    padding: 0 var(--s-4);
+  }
+  .position {
+    min-width: 0;
+  }
+  .position span:last-child {
+    display: none;
   }
 }
 
@@ -1383,6 +1410,7 @@ button {
     border: 1px solid var(--line);
   }
   .string {
+    min-width: 0;
     flex-direction: column-reverse;
     justify-content: space-between;
     padding: var(--s-2) 0;
@@ -1408,6 +1436,16 @@ button {
   .string .key {
     display: none;
   }
+  .string > span:first-child {
+    visibility: hidden;
+  }
+  .string[data-tonic='true'] > span:first-child,
+  .string[data-hot='true'] > span:first-child {
+    visibility: visible;
+  }
+  .instrument > * {
+    min-width: 0;
+  }
   .camera {
     display: none;
   }
@@ -1428,10 +1466,7 @@ button {
     display: none;
   }
   .sculpt-panel {
-    position: static;
-    width: auto;
-    margin: var(--s-3) var(--s-4) 0;
-    grid-area: auto;
+    margin: 0;
   }
   .toast {
     bottom: 88px;

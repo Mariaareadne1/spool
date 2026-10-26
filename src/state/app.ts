@@ -7,7 +7,7 @@ import { demoProject } from '../music/demo';
 import { addPhrase, createProject, setTrack, updateSettings } from '../music/project';
 import { Recorder, type Take } from '../music/recorder';
 import { quantize, type ScaleName } from '../music/theory';
-import { deletePhrase, GRID, phraseNotes, sculptPhrase, STRETCH_FACTORS } from '../music/transform';
+import { clampSteps, deletePhrase, GRID, phraseNotes, sculptPhrase, STRETCH_FACTORS } from '../music/transform';
 import { loopBeats, type Project, type TrackId } from '../music/types';
 import { angleDelta, degreeRadius, hitTest, pitchRange, stepSize, toPolar, type Layout } from '../ui/geometry';
 import { THREAD } from '../ui/theme';
@@ -236,9 +236,11 @@ export class SpoolApp {
 
   // ---------- performing ----------
 
-  noteOn(source: string, degree: number, velocity = 0.8): void {
+  noteOn(source: string, requested: number, velocity = 0.8): void {
     const engine = this.engine;
     if (!engine) return;
+    const range = pitchRange(this.project);
+    const degree = Math.min(range.hi, Math.max(range.lo, requested));
     const existing = this.state.held.find((h) => h.source === source);
     if (existing) {
       if (existing.degree === degree) return;
@@ -439,7 +441,8 @@ export class SpoolApp {
     drag.turn += angleDelta(drag.lastTheta, polar.theta);
     drag.lastTheta = polar.theta;
     const beats = quantize((drag.turn / (2 * Math.PI)) * loop, GRID);
-    const steps = Math.round((polar.r - drag.r0) / stepSize(stage.layout, project));
+    const raw = Math.round((polar.r - drag.r0) / stepSize(stage.layout, project));
+    const steps = clampSteps(project, drag.phraseId, raw, pitchRange(project));
     if (steps !== edit.steps) {
       const first = phraseNotes(project, drag.phraseId)[0];
       if (first) this.engine?.audition(first.track, first.degree + steps, 0.18);
@@ -468,7 +471,8 @@ export class SpoolApp {
   nudge(edit: Partial<Omit<SculptEdit, 'phraseId'>>): void {
     const sel = this.state.selection;
     if (!sel || this.drag) return;
-    const full = { steps: edit.steps ?? 0, beats: edit.beats ?? 0, factor: edit.factor ?? 1 };
+    const full = { steps: clampSteps(this.project, sel, edit.steps ?? 0, pitchRange(this.project)), beats: edit.beats ?? 0, factor: edit.factor ?? 1 };
+    if (full.steps === 0 && full.beats === 0 && full.factor === 1) return;
     this.commitProject(sculptPhrase(this.project, sel, full));
     if (full.steps) {
       const first = phraseNotes(this.project, sel)[0];

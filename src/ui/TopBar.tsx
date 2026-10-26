@@ -67,8 +67,8 @@ export function TopBar() {
       </div>
       <div className="topbar__spacer" />
       <div className="menu" ref={projectsRef}>
-        <button className="btn btn--ghost" aria-expanded={menu === 'projects'} onClick={() => setMenu(menu === 'projects' ? null : 'projects')} data-testid="projects-menu">
-          Projects <ChevronIcon />
+        <button className="btn btn--ghost" aria-label="Projects" aria-expanded={menu === 'projects'} onClick={() => setMenu(menu === 'projects' ? null : 'projects')} data-testid="projects-menu">
+          <span className="hide-sm">Projects</span> <ChevronIcon />
         </button>
         {menu === 'projects' && (
           <div className="menu__panel" role="menu">
@@ -112,8 +112,8 @@ export function TopBar() {
         }}
       />
       <div className="menu" ref={exportRef}>
-        <button className="btn" aria-expanded={menu === 'export'} disabled={exporting} onClick={() => setMenu(menu === 'export' ? null : 'export')} data-testid="export-menu">
-          <DownloadIcon /> {exporting ? 'Rendering…' : 'Export'}
+        <button className="btn" aria-label={exporting ? 'Rendering export' : 'Export'} aria-expanded={menu === 'export'} disabled={exporting} onClick={() => setMenu(menu === 'export' ? null : 'export')} data-testid="export-menu">
+          <DownloadIcon /> <span className="hide-sm">{exporting ? 'Rendering…' : 'Export'}</span>
         </button>
         {menu === 'export' && (
           <div className="menu__panel" role="menu">

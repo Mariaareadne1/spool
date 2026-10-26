@@ -75,3 +75,14 @@ export function sculptPhrase(
   next = shiftPhrase(next, phraseId, edit.beats);
   return next;
 }
+
+/** Largest transposition in [−steps, +steps] that keeps every note of the phrase within [lo, hi]. */
+export function clampSteps(project: Project, phraseId: string, steps: number, range: { lo: number; hi: number }): number {
+  const degrees = phraseNotes(project, phraseId).map((n) => n.degree);
+  if (degrees.length === 0) return 0;
+  const min = Math.min(...degrees);
+  const max = Math.max(...degrees);
+  const down = Math.min(0, range.lo - min);
+  const up = Math.max(0, range.hi - max);
+  return Math.max(down, Math.min(up, steps));
+}

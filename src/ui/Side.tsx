@@ -1,6 +1,7 @@
 import { TRACK_IDS } from '../music/types';
 import { useAppState, useSpool } from './context';
 import { THREAD } from './theme';
+import { SculptPanel } from './SculptPanel';
 
 const PERFORM_HINTS_POINTER: [string, string][] = [
   ['Play', 'rail · ring · A–;'],
@@ -34,7 +35,8 @@ export function Side() {
   const project = state.history.present;
   const counts = Object.fromEntries(TRACK_IDS.map((t) => [t, project.notes.filter((n) => n.track === t).length]));
   const camera = state.input === 'camera';
-  const hints = state.mode === 'sculpt' ? (camera ? SCULPT_HINTS_CAMERA : SCULPT_HINTS) : camera ? PERFORM_HINTS_CAMERA : PERFORM_HINTS_POINTER;
+  const sculptHints = camera ? SCULPT_HINTS_CAMERA : SCULPT_HINTS;
+  const hints = state.mode === 'sculpt' ? sculptHints : camera ? PERFORM_HINTS_CAMERA : PERFORM_HINTS_POINTER;
 
   return (
     <aside className="side" aria-label="Mode and threads">
@@ -92,6 +94,8 @@ export function Side() {
           })}
         </ul>
       </section>
+
+      {state.mode === 'sculpt' && <SculptPanel />}
 
       <section className="hints" aria-label="Controls">
         <span className="label">{state.mode === 'sculpt' ? 'Sculpt' : 'Perform'} · {camera ? 'hands' : 'pointer & keys'}</span>

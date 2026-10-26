@@ -38,7 +38,7 @@ export function SpoolPreview({ project, label }: { project: Project; label: stri
     );
   }, [project, size]);
   return (
-    <div ref={box} style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center' }}>
+    <div ref={box} style={{ width: '100%', height: '100%', minWidth: 0, display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
       <canvas ref={canvas} role="img" aria-label={label} />
     </div>
   );
@@ -202,7 +202,7 @@ export function Spool() {
           }
         }}
       />
-      {empty && state.mode === 'perform' && (
+      {empty && state.mode === 'perform' && !(state.input === 'camera' && !state.handsVisible) && (
         <div className="stage__empty">
           <div className="stage__empty-inner">
             <em>An empty spool.</em>

@@ -49,7 +49,7 @@ export function Transport() {
       <Position />
       <span className="transport__sep" />
       <div className="field">
-        <span className="label hide-sm">Tempo</span>
+        <span className="label hide-md">Tempo</span>
         <div className="stepper">
           <button aria-label="Slower" onClick={() => app.setBpm(p.bpm - 4)} disabled={p.bpm <= BPM_RANGE.min}>−</button>
           <output data-testid="bpm">{p.bpm}</output>
@@ -57,12 +57,12 @@ export function Transport() {
         </div>
       </div>
       <div className="field hide-sm">
-        <span className="label">Loop</span>
+        <span className="label hide-md">Loop</span>
         <select value={p.bars} onChange={(e) => app.setBars(Number(e.target.value))} aria-label="Loop length in bars" data-testid="bars">
           {BAR_OPTIONS.map((b) => <option key={b} value={b}>{b} bar{b > 1 ? 's' : ''}</option>)}
         </select>
       </div>
-      <div className="field">
+      <div className="field hide-sm">
         <span className="label hide-md">Key</span>
         <select value={p.root} onChange={(e) => app.setKey(Number(e.target.value), p.scale)} aria-label="Key" data-testid="key-root">
           {NOTE_NAMES.map((n, i) => <option key={n} value={i}>{n}</option>)}
@@ -73,7 +73,7 @@ export function Transport() {
       </div>
       <div className="transport__spacer" />
       <div className="transport__group hide-sm">
-        <button className="toggle" aria-pressed={state.metronome} onClick={() => app.setMetronome(!state.metronome)}>Click</button>
+        <button className="toggle hide-md" aria-pressed={state.metronome} onClick={() => app.setMetronome(!state.metronome)}>Click</button>
         <button className="toggle" aria-pressed={state.snap} onClick={() => app.setSnap(!state.snap)} title="Snap recorded notes to 1/16">Snap</button>
         <button
           className="toggle"

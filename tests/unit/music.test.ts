@@ -153,3 +153,13 @@ describe('recorder', async () => {
     expect(r.noteOff(99, 2)).toBeNull();
   });
 });
+
+describe('clampSteps', async () => {
+  const { clampSteps } = await import('../../src/music/transform');
+  test('keeps the phrase inside the playable range', () => {
+    const p = withPhrase(createProject(), [0, 1, 2]); // degrees 0,1,2
+    expect(clampSteps(p, 'ph1', -3, { lo: 0, hi: 14 })).toBe(0);
+    expect(clampSteps(p, 'ph1', 20, { lo: 0, hi: 14 })).toBe(12);
+    expect(clampSteps(p, 'ph1', 4, { lo: 0, hi: 14 })).toBe(4);
+  });
+});

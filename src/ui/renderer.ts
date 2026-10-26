@@ -191,7 +191,7 @@ export class SpoolRenderer {
       for (let d = lo; d <= hi; d++) {
         g.beginPath();
         g.arc(l.cx, l.cy, degreeRadius(l, p, track, d), 0, TAU);
-        g.strokeStyle = active ? `rgba(${t.rgb}, 0.06)` : 'rgba(237, 230, 218, 0.022)';
+        g.strokeStyle = active ? `rgba(${t.rgb}, 0.05)` : 'rgba(237, 230, 218, 0.022)';
         g.lineWidth = 0.6;
         g.stroke();
       }
@@ -199,7 +199,7 @@ export class SpoolRenderer {
         g.beginPath();
         g.arc(l.cx, l.cy, outer - 1, 0, TAU);
         g.arc(l.cx, l.cy, inner + 1, 0, TAU, true);
-        g.fillStyle = `rgba(${t.rgb}, 0.045)`;
+        g.fillStyle = `rgba(${t.rgb}, 0.028)`;
         g.fill();
       }
       // tonic circles: the "staff lines" of each ring
@@ -272,18 +272,31 @@ export class SpoolRenderer {
     const phrase = p.phrases.find((ph) => ph.id === phraseId);
     if (!phrase) return;
     const notes = p.notes.filter((n) => n.phraseId === phraseId).sort((a, b) => mod(a.start - phrase.anchor, loop) - mod(b.start - phrase.anchor, loop));
+    // consecutive notes are joined by a spiral that winds forward in time between them
     g.beginPath();
-    notes.forEach((n, i) => {
-      const r = degreeRadius(l, p, n.track, n.degree);
-      const a = beatAngle(n.start, loop);
-      const x = l.cx + Math.cos(a) * r;
-      const y = l.cy + Math.sin(a) * r;
-      if (i === 0) g.moveTo(x, y);
-      else g.lineTo(x, y);
-    });
-    g.strokeStyle = 'rgba(255, 250, 240, 0.35)';
-    g.lineWidth = 0.75;
+    for (let i = 0; i < notes.length - 1; i++) {
+      const n = notes[i];
+      const m = notes[i + 1];
+      const r0 = degreeRadius(l, p, n.track, n.degree);
+      const r1 = degreeRadius(l, p, m.track, m.degree);
+      const b0 = n.start + n.duration;
+      const gap = mod(m.start - b0, loop);
+      const steps = Math.max(2, Math.ceil(gap * 6));
+      for (let k = 0; k <= steps; k++) {
+        const f = k / steps;
+        const a = beatAngle(b0 + gap * f, loop);
+        const r = r0 + (r1 - r0) * f;
+        const x = l.cx + Math.cos(a) * r;
+        const y = l.cy + Math.sin(a) * r;
+        if (k === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      }
+    }
+    g.setLineDash([1.5, 3]);
+    g.strokeStyle = 'rgba(255, 250, 240, 0.45)';
+    g.lineWidth = 0.9;
     g.stroke();
+    g.setLineDash([]);
     const a = beatAngle(phrase.anchor, loop);
     const r = l.outer * 0.88;
     g.save();
@@ -303,17 +316,27 @@ export class SpoolRenderer {
     g.lineWidth = recording ? 1.5 : 0.75;
     g.stroke();
     const name = NOTE_NAMES[p.root];
+    const compact = l.hub < 52;
     g.fillStyle = INK.paper;
     g.textAlign = 'center';
     g.textBaseline = 'alphabetic';
-    g.font = `italic 300 ${l.hub * 0.62}px ${FONT.display}`;
-    g.fillText(name, l.cx, l.cy + l.hub * 0.1);
-    g.fillStyle = INK.muted;
-    g.font = `400 ${Math.max(9, l.hub * 0.15)}px ${FONT.ui}`;
-    g.fillText(SCALE_LABELS[p.scale], l.cx, l.cy + l.hub * 0.38);
-    g.fillStyle = recording ? INK.rec : INK.faint;
-    g.font = `500 ${Math.max(8, l.hub * 0.12)}px ${FONT.mono}`;
-    g.fillText(recording ? '● REC' : `${p.bpm} BPM`, l.cx, l.cy + l.hub * 0.6);
+    g.font = `italic 300 ${l.hub * (compact ? 0.78 : 0.62)}px ${FONT.display}`;
+    g.fillText(name, l.cx, l.cy + l.hub * (compact ? 0.26 : 0.1));
+    if (compact) {
+      if (recording) {
+        g.fillStyle = INK.rec;
+        g.beginPath();
+        g.arc(l.cx, l.cy + l.hub * 0.62, 2.5, 0, TAU);
+        g.fill();
+      }
+    } else {
+      g.fillStyle = INK.muted;
+      g.font = `400 ${l.hub * 0.15}px ${FONT.ui}`;
+      g.fillText(SCALE_LABELS[p.scale], l.cx, l.cy + l.hub * 0.38);
+      g.fillStyle = recording ? INK.rec : INK.faint;
+      g.font = `500 ${l.hub * 0.12}px ${FONT.mono}`;
+      g.fillText(recording ? '● REC' : `${p.bpm} BPM`, l.cx, l.cy + l.hub * 0.6);
+    }
   }
 
   // ---------------- dynamic layer ----------------
