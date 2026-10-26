@@ -264,6 +264,17 @@ export class SpoolApp {
     this.set(note && this.recorder ? { held: remaining, take: this.recorder.current } : { held: remaining });
   }
 
+  /** Replace a just-started note with a new pitch; the abandoned one is never recorded. */
+  retune(source: string, degree: number, velocity = 0.8): void {
+    const held = this.state.held.find((h) => h.source === source);
+    if (held && this.engine) {
+      this.recorder?.cancel(held.handle.id);
+      this.engine.noteOff(held.handle);
+      this.set({ held: this.state.held.filter((h) => h !== held) });
+    }
+    this.noteOn(source, degree, velocity);
+  }
+
   releaseAll(): void {
     for (const h of [...this.state.held]) this.noteOff(h.source);
   }
@@ -504,6 +515,9 @@ export class SpoolApp {
         case 'noteOn':
         case 'glide':
           this.noteOn('gesture', c.degree, c.velocity);
+          break;
+        case 'retune':
+          this.retune('gesture', c.degree, c.velocity);
           break;
         case 'noteOff':
           this.noteOff('gesture');

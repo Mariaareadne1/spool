@@ -55,6 +55,11 @@ export class Recorder {
     return this.append(h, beat);
   }
 
+  /** Forget a held note without recording it (it was retuned before it meant anything). */
+  cancel(handle: number): void {
+    this.held.delete(handle);
+  }
+
   /** Close every held note at `beat` (recording stopped while fingers were still down). */
   flush(beat: number): void {
     for (const [handle] of this.held) this.noteOff(handle, beat);

@@ -3,6 +3,8 @@ import { Dwell, type GestureFrame, type HandState } from './interpret';
 export type GestureCommand =
   | { readonly type: 'noteOn'; readonly degree: number; readonly velocity: number }
   | { readonly type: 'glide'; readonly degree: number; readonly velocity: number }
+  /** Pitch settled just after the pinch: replace the note rather than add a new one. */
+  | { readonly type: 'retune'; readonly degree: number; readonly velocity: number }
   | { readonly type: 'noteOff' }
   | { readonly type: 'toggleRecord' }
   | { readonly type: 'grab'; readonly x: number; readonly y: number }
@@ -11,6 +13,9 @@ export type GestureCommand =
   | { readonly type: 'drop' };
 
 export type InstrumentMode = 'perform' | 'sculpt';
+
+/** After a pinch starts, pitch changes within this window retune the note instead of gliding. */
+export const SETTLE_MS = 120;
 
 /** Vertical band of the camera frame that maps onto the pitch rail. */
 export const PLAY_ZONE = { top: 0.12, bottom: 0.88 } as const;
@@ -54,6 +59,7 @@ export interface GestureOutput {
  */
 export class GestureController {
   private sounding = false;
+  private soundingSince = 0;
   private degree: number | null = null;
   private grabbing = false;
   private stretchStart: number | null = null;
@@ -81,7 +87,7 @@ export class GestureController {
 
     if (mode === 'perform') {
       if (this.grabbing) commands.push(...this.endGrab());
-      this.perform(play, range, commands);
+      this.perform(play, range, commands, frame.t);
     } else {
       if (this.sounding) {
         commands.push({ type: 'noteOff' });
@@ -92,7 +98,7 @@ export class GestureController {
     return { commands, recordHold: hold.progress, degree: this.degree };
   }
 
-  private perform(play: HandState | null, range: PitchRange, out: GestureCommand[]): void {
+  private perform(play: HandState | null, range: PitchRange, out: GestureCommand[], t: number): void {
     if (!play) {
       if (this.sounding) out.push({ type: 'noteOff' });
       this.sounding = false;
@@ -103,9 +109,10 @@ export class GestureController {
     const velocity = velocityFromSize(play.size);
     if (play.pinched && !this.sounding) {
       this.sounding = true;
+      this.soundingSince = t;
       out.push({ type: 'noteOn', degree: next, velocity });
     } else if (play.pinched && this.sounding && next !== this.degree) {
-      out.push({ type: 'glide', degree: next, velocity });
+      out.push({ type: t - this.soundingSince < SETTLE_MS ? 'retune' : 'glide', degree: next, velocity });
     } else if (!play.pinched && this.sounding) {
       this.sounding = false;
       out.push({ type: 'noteOff' });

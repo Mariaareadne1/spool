@@ -135,3 +135,23 @@ describe('controller → instrument commands', () => {
     expect(d.update(true, 300).fired).toBe(false);
   });
 });
+
+describe('pinch settle', () => {
+  test('pitch change right after the pinch retunes; later changes glide', async () => {
+    const { GestureController } = await import('../../src/gesture/controller');
+    const gi = new GestureInterpreter();
+    const gc = new GestureController();
+    const types: string[] = [];
+    const feed = (y: number, pose: Pose, t: number) => gc.update(gi.process([makeHand({ x: 0.6, y, pose })], t), 'perform', RANGE).commands.forEach((c) => types.push(c.type));
+    feed(0.5, 'open', 0);
+    feed(0.5, 'pinch', 33);
+    feed(0.2, 'pinch', 66); // jump within the settle window
+    for (let i = 0; i < 6; i++) feed(0.2, 'pinch', 99 + i * 33);
+    feed(0.8, 'pinch', 600); // deliberate move later
+    for (let i = 0; i < 6; i++) feed(0.8, 'pinch', 633 + i * 33);
+    expect(types[0]).toBe('noteOn');
+    expect(types.slice(1, types.indexOf('glide'))).not.toContain('glide');
+    expect(types).toContain('retune');
+    expect(types).toContain('glide');
+  });
+});
