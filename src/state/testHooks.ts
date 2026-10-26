@@ -1,4 +1,6 @@
 import type { RawHand } from '../gesture/interpret';
+import { loopBeats } from '../music/types';
+import { beatAngle, degreeRadius } from '../ui/geometry';
 import type { SpoolApp } from './app';
 
 /**
@@ -21,6 +23,27 @@ export function installTestHooks(app: SpoolApp): void {
         return e ? { playing: e.isPlaying, position: e.loopPosition(), activeVoices: e.activeVoices, state: e.ctx.state } : null;
       },
       stage: () => app.stage,
+      /** Client coordinates of a point inside a note's thread (fraction 0..1 along it). */
+      notePoint: (noteId: string, along = 0.5) => {
+        const stage = app.stage;
+        const project = app.playbackProject();
+        const note = project.notes.find((n) => n.id === noteId);
+        const canvas = document.querySelector('[data-testid="spool-canvas"]');
+        if (!stage || !note || !canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        const r = degreeRadius(stage.layout, project, note.track, note.degree);
+        const a = beatAngle(note.start + note.duration * along, loopBeats(project));
+        return { x: rect.left + stage.layout.cx + Math.cos(a) * r, y: rect.top + stage.layout.cy + Math.sin(a) * r };
+      },
+      /** Client coordinates for a polar point on the stage. */
+      polarPoint: (r: number, beat: number) => {
+        const stage = app.stage;
+        const canvas = document.querySelector('[data-testid="spool-canvas"]');
+        if (!stage || !canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        const a = beatAngle(beat, loopBeats(app.project));
+        return { x: rect.left + stage.layout.cx + Math.cos(a) * r, y: rect.top + stage.layout.cy + Math.sin(a) * r };
+      },
     },
   });
 }

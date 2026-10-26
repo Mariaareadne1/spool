@@ -146,3 +146,15 @@ describe('wav', () => {
     expect(dec.data[0][1]).toBeCloseTo(0.49, 2); // relative levels preserved
   });
 });
+
+describe('spectral flux onsets', async () => {
+  const { detectOnsetsFlux } = await import('../../src/audio/analysis');
+  test('finds a pluck attack masked by a sustained bass note', async () => {
+    let p = compose([{ start: 0, degree: 0, duration: 4 }], 'bass');
+    p = compose([{ start: 1, degree: 4, duration: 0.5 }, { start: 2.5, degree: 2, duration: 0.5 }], 'pluck', p);
+    const buf = await renderProject(p, ONE_LOOP, Offline);
+    const onsets = detectOnsetsFlux(buf.getChannelData(0), SR);
+    for (const t of [0, 0.5, 1.25]) expect(onsets.some((o) => Math.abs(o - t) < 0.03)).toBe(true);
+    expect(onsets.length).toBeLessThanOrEqual(4);
+  });
+});

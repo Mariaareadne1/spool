@@ -118,6 +118,57 @@ export function detectOnsets(data: Float32Array, sampleRate: number, hop = 256, 
   return onsets;
 }
 
+/**
+ * Spectral-flux onsets: the summed *increase* in magnitude across all bins
+ * between successive frames. A new note adds energy in new bins even while
+ * another note sustains, so masked attacks still register (energy ratios miss
+ * a pluck over a held bass). Peaks above an adaptive median threshold count.
+ */
+export function detectOnsetsFlux(input: Float32Array, sampleRate: number, size = 1024, hop = 256, sensitivity = 1.6): number[] {
+  // lead-in silence so an attack at t = 0 still has a "before" frame
+  const data = new Float32Array(input.length + size);
+  data.set(input, size);
+  const frames = Math.floor((data.length - size) / hop);
+  if (frames < 3) return [];
+  const flux = new Float64Array(frames);
+  let prev: Float64Array | null = null;
+  const slice = new Float32Array(size);
+  for (let f = 0; f < frames; f++) {
+    slice.set(data.subarray(f * hop, f * hop + size));
+    const mags = fftMagnitudes(slice);
+    if (prev) {
+      let sum = 0;
+      for (let i = 1; i < mags.length; i++) {
+        // sqrt compression: between linear (loud-biased) and log (noise-biased)
+        const d = Math.sqrt(mags[i]) - Math.sqrt(prev[i]);
+        if (d > 0) sum += d;
+      }
+      flux[f] = sum;
+    }
+    prev = mags;
+  }
+  const win = Math.round((0.25 * sampleRate) / hop);
+  let max = 0;
+  for (let f = 0; f < frames; f++) max = Math.max(max, flux[f]);
+  const onsets: number[] = [];
+  let last = -Infinity;
+  for (let f = 1; f < frames - 1; f++) {
+    const lo = Math.max(0, f - win);
+    const hi = Math.min(frames, f + win);
+    const local = Array.from(flux.subarray(lo, hi)).sort((a, b) => a - b);
+    const median = local[Math.floor(local.length / 2)];
+    const threshold = Math.max(median * sensitivity, max * 0.12);
+    const isPeak = flux[f] > flux[f - 1] && flux[f] >= flux[f + 1];
+    // frame f compares windows starting at (f-1)·hop and f·hop: the attack sits ~half a window in
+    const t = (f * hop + size / 2 - size) / sampleRate;
+    if (isPeak && flux[f] > threshold && t - last > 0.08 && t >= -0.01) {
+      onsets.push(Math.max(0, t));
+      last = t;
+    }
+  }
+  return onsets;
+}
+
 export function centsBetween(a: number, b: number): number {
   return 1200 * Math.log2(a / b);
 }
